@@ -44,12 +44,19 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AliasHashTable.cs" />
+    <Compile Include="BlockingQueue.cs" />
     <Compile Include="DirectoryNodeInfo.cs" />
     <Compile Include="FastConServer.cs" />
     <Compile Include="FileDirectoryQueryTree.cs" />
+    <Compile Include="FilenameFilter.cs" />
     <Compile Include="FileNodeInfo.cs" />
+    <Compile Include="MFTScanner .cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="USNHelper.cs" />
+    <Compile Include="Utility.cs" />
+    <Compile Include="W32USN.cs" />
+    <Compile Include="WordBreaker.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
