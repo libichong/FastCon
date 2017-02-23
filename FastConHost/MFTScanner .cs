@@ -128,7 +128,11 @@ namespace FastConHost
             //// volume handle
 
             m_DriveLetter = szDriveLetter;
-            hCJ = CreateFile(@"\\.\" + szDriveLetter, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, IntPtr.Zero, OPEN_EXISTING, 0, IntPtr.Zero);
+            hCJ = CreateFile(@"\\.\" + szDriveLetter, 
+                GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 
+                IntPtr.Zero, OPEN_EXISTING, 
+                0, 
+                IntPtr.Zero);
 
             return hCJ;
 
@@ -150,14 +154,17 @@ namespace FastConHost
                 Marshal.FreeHGlobal(m_Buffer);
                 m_Buffer = IntPtr.Zero;
             }
-
         }
 
-        public IEnumerable<String> EnumerateFiles(string szDriveLetter, HashSet<string> excludeDirectories = null, string fileName = null)
+        private Dictionary<long, FSNode> dicFRNLookup = new Dictionary<long, FSNode>();
+        private Dictionary<long, FileNodeInfo> FileLookUp = new Dictionary<long, FileNodeInfo>();
+        private Dictionary<long, DirectoryNodeInfo> DirLookUp = new Dictionary<long, DirectoryNodeInfo>();
+        public IEnumerable<String> BuildIndex(string szDriveLetter, HashSet<string> excludeDirectories = null)
         {
-            return EnumerateFiles(null, szDriveLetter, excludeDirectories, fileName);
+            return BuildIndex(null, szDriveLetter, excludeDirectories);
         }
-        public IEnumerable<String> EnumerateFiles(BackgroundWorker bw, string szDriveLetter, HashSet<string> excludeDirectories = null, string fileName = null)
+
+        public IEnumerable<String> BuildIndex(BackgroundWorker bw, string szDriveLetter, HashSet<string> excludeDirectories = null)
         {
             var ci = CultureInfo.CurrentCulture;
             try
@@ -166,7 +173,6 @@ namespace FastConHost
                 var mft = default(MFT_ENUM_DATA);
                 var dwRetBytes = 0;
                 var cb = 0;
-                var dicFRNLookup = new Dictionary<long, FSNode>();
                 var bIsFile = false;
 
                 // This shouldn't be called more than once.
@@ -225,12 +231,12 @@ namespace FastConHost
                             FSNode pa = fs;
                             FSNode temp = fs;
                             String partPath = null;
+
                             while (dicFRNLookup.TryGetValue(temp.ParentFRN, out temp))
                             {
                                 pa = temp;
                                 partPath = string.Concat(temp.FileName, @"\", partPath);
                             }
-
 
                             if (!pa.IsFile)
                             {
@@ -240,8 +246,9 @@ namespace FastConHost
                                     topPar = pa.FileName;
                                 }
                                 else
+                                {
                                     topPar = pa.FileName;
-
+                                }
                             }
 
                             string fullDirectory = string.Concat(szDriveLetter, @"\", partPath);
@@ -265,11 +272,28 @@ namespace FastConHost
 
                             fs.FullDirectory = fullDirectory;
                             dicFRNLookup.Add(refnum, fs);
+
+                            var sFullPath = string.Concat(fs.FullDirectory, fs.FileName);
+                            if (fs.IsFile)
+                            {
+                                if (!File.Exists(sFullPath))
+                                {
+                                    continue;
+                                }
+                            }
+                            else
+                            {
+                                if(!Directory.Exists(sFullPath))
+                                {
+                                    continue;
+                                }
+                            }
+
+                            yield return sFullPath;
                         }
 
                         // The first 8 bytes is always the start of the next USN.
                         mft.StartFileReferenceNumber = Marshal.ReadInt64(m_Buffer, 0);
-
 
                     }
                     else
@@ -279,30 +303,6 @@ namespace FastConHost
                     }
 
                 } while (!(cb <= 8));
-
-                bool isSearching = !string.IsNullOrEmpty(fileName);
-                // Resolve all paths for Files
-                foreach (FSNode oFSNode in dicFRNLookup.Values.Where(o => o.IsFile))
-                {
-                    string sFullPath = oFSNode.FileName;
-
-                    string pt = string.Concat(szDriveLetter, @"\", sFullPath);
-
-
-                    if (isSearching)
-                    {
-                        if (ci.CompareInfo.IndexOf(sFullPath, fileName, CompareOptions.IgnoreCase) < 0)
-                        {
-                            continue;
-                        }
-                    }
-                    sFullPath = string.Concat(oFSNode.FullDirectory, sFullPath);
-                    if (!File.Exists(sFullPath))
-                        continue;
-                    //Debug.WriteLine(sFullPath);
-
-                    yield return sFullPath;
-                }
             }
             finally
             {
@@ -334,24 +334,23 @@ namespace FastConHost
 
     public static class DriveInfoExtension
     {
-        public static IEnumerable<String> EnumerateFiles(this DriveInfo drive, HashSet<string> excludeDirectories = null, string fileName = null)
+        public static IEnumerable<String> EnumerateFiles(this DriveInfo drive, HashSet<string> excludeDirectories = null)
         {
-            return (new MFTScanner()).EnumerateFiles(drive.Name, excludeDirectories, fileName);
+            return (new MFTScanner()).BuildIndex(drive.Name, excludeDirectories);
         }
-        public static IEnumerable<String> EnumerateFiles(this DriveInfo drive, BackgroundWorker bw, HashSet<string> excludeDirectories = null, string fileName = null)
+        public static IEnumerable<String> EnumerateFiles(this DriveInfo drive, BackgroundWorker bw, HashSet<string> excludeDirectories = null)
         {
-            return (new MFTScanner()).EnumerateFiles(bw, drive.Name, excludeDirectories, fileName);
+            return (new MFTScanner()).BuildIndex(bw, drive.Name, excludeDirectories);
         }
 
-
-        public static IEnumerable<string> EnumerateFiles(this DirectoryInfo self, DirectoryInfo[] direvers, HashSet<string> excludeDirectories = null, string fileName = null)
+        public static IEnumerable<string> EnumerateFiles(this DirectoryInfo self, DirectoryInfo[] direvers, HashSet<string> excludeDirectories = null)
         {
             List<string> total = new List<string>();
             foreach (DirectoryInfo dr in direvers)
             {
                 try
                 {
-                    total.AddRange((new MFTScanner()).EnumerateFiles(dr.Name, excludeDirectories, fileName));
+                    total.AddRange((new MFTScanner()).BuildIndex(dr.Name, excludeDirectories));
                 }
                 catch (Exception e)
                 {
