@@ -13,7 +13,7 @@ namespace FastConHost
         static void Main(string[] args)
         {
             var sw = Stopwatch.StartNew();
-            var files = (new DriveInfo(@"c:\")).EnumerateFiles().ToArray();
+            var files = (new DriveInfo(@"d:\")).EnumerateFiles().ToArray();
             var elapsed = sw.ElapsedMilliseconds.ToString();
             Console.WriteLine(string.Format("Found {0} files, elapsed {1} ms", files.Length, elapsed));
 

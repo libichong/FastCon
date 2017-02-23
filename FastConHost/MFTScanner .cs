@@ -288,7 +288,6 @@ namespace FastConHost
 
                     string pt = string.Concat(szDriveLetter, @"\", sFullPath);
 
-
                     if (isSearching)
                     {
                         if (ci.CompareInfo.IndexOf(sFullPath, fileName, CompareOptions.IgnoreCase) < 0)
@@ -296,10 +295,10 @@ namespace FastConHost
                             continue;
                         }
                     }
+
                     sFullPath = string.Concat(oFSNode.FullDirectory, sFullPath);
                     if (!File.Exists(sFullPath))
                         continue;
-                    //Debug.WriteLine(sFullPath);
 
                     yield return sFullPath;
                 }
