@@ -156,9 +156,7 @@ namespace FastConHost
             }
         }
 
-        private Dictionary<long, FSNode> dicFRNLookup = new Dictionary<long, FSNode>();
-        private Dictionary<long, FileNodeInfo> FileLookUp = new Dictionary<long, FileNodeInfo>();
-        private Dictionary<long, DirectoryNodeInfo> DirLookUp = new Dictionary<long, DirectoryNodeInfo>();
+        private FileDirectoryQueryTree FileDirQueryTree = new FileDirectoryQueryTree();
         public IEnumerable<String> BuildIndex(string szDriveLetter, HashSet<string> excludeDirectories = null)
         {
             return BuildIndex(null, szDriveLetter, excludeDirectories);
@@ -166,6 +164,7 @@ namespace FastConHost
 
         public IEnumerable<String> BuildIndex(BackgroundWorker bw, string szDriveLetter, HashSet<string> excludeDirectories = null)
         {
+            var dicFRNLookup = new Dictionary<long, FSNode>();
             var ci = CultureInfo.CurrentCulture;
             try
             {
@@ -280,6 +279,7 @@ namespace FastConHost
                                 {
                                     continue;
                                 }
+                                FileDirQueryTree.Add(new FileNodeInfo(refnum, usnRecord.ParentFileReferenceNumber, sFullPath));
                             }
                             else
                             {
@@ -287,6 +287,7 @@ namespace FastConHost
                                 {
                                     continue;
                                 }
+                                FileDirQueryTree.Add(new DirectoryNodeInfo(refnum, usnRecord.ParentFileReferenceNumber, sFullPath));
                             }
 
                             yield return sFullPath;

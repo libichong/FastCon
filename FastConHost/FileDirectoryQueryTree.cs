@@ -11,28 +11,46 @@ namespace FastConHost
     {
         private Dictionary<long, FileNodeInfo> fileTree;
         private Dictionary<long, DirectoryNodeInfo> dirTree;
+        private WordBreaker wordBreaker;
 
         public FileDirectoryQueryTree()
         {
             fileTree = new Dictionary<long, FileNodeInfo>();
             dirTree = new Dictionary<long, DirectoryNodeInfo>();
+            wordBreaker = new WordBreaker(@"C:\FastCon\Library\words.dll");
         }
         public void Dispose()
         {
         }
 
-        public void Add(DirectoryInfo dir)
+        public void Add(DirectoryNodeInfo dir)
         {
-            var name = dir.Name.ToLower();
-            if (!this.ContainsKey(name))
+
+            //var name = dir.Name.ToLower();
+            //if (!this.ContainsKey(name))
+            //{
+            //    this[name] = new HashSet<long>();
+            //}
+            var subWords = wordBreaker.BreakWorkds(dir.DirectoryName);
+
+            foreach(var subWord in subWords)
             {
-                this[name] = new HashSet<long>();
+                if(!this.ContainsKey(subWord))
+                {
+                    this[subWord] = new HashSet<long>();
+                }
+                this[subWord].Add(dir.DirectoryNodeId);
             }
 
             //if (!this[name].Contains(dir.FullName))
             //{
             //    this[name].AddLast(dir.FullName);
             //}
+        }
+
+        public void Add(FileNodeInfo fileNode)
+        {
+            fileTree[fileNode.FileNodeId] = fileNode;
         }
 
         public void Serialize(Stream stream)

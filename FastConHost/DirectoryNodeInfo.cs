@@ -8,8 +8,11 @@ namespace FastConHost
 {
     public class DirectoryNodeInfo
     {
-        public DirectoryNodeInfo()
+        public DirectoryNodeInfo(long id, long parentId, string dirName)
         {
+            DirectoryNodeId = id;
+            ParentDirectoryId = parentId;
+            DirectoryName = dirName;
             ChildDirectoryIds = new List<long>();
         }
 
