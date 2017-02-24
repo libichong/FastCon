@@ -10,6 +10,23 @@ using System.Security.Principal;
 
 namespace FastConHost
 {
+    public class FSNode
+    {
+        public long FRN;
+        public long ParentFRN;
+        public string FileName;
+        public string FullDirectory;
+
+        public bool IsFile;
+        public FSNode(long lFRN, long lParentFSN, string sFileName, bool bIsFile)
+        {
+            FRN = lFRN;
+            ParentFRN = lParentFSN;
+            FileName = sFileName;
+            IsFile = bIsFile;
+        }
+    }
+
     /// <summary>
     ///
     /// </summary>
@@ -104,23 +121,6 @@ namespace FastConHost
 
         private string m_DriveLetter;
 
-        private class FSNode
-        {
-            public long FRN;
-            public long ParentFRN;
-            public string FileName;
-            public string FullDirectory;
-
-            public bool IsFile;
-            public FSNode(long lFRN, long lParentFSN, string sFileName, bool bIsFile)
-            {
-                FRN = lFRN;
-                ParentFRN = lParentFSN;
-                FileName = sFileName;
-                IsFile = bIsFile;
-            }
-        }
-
         private IntPtr OpenVolume(string szDriveLetter)
         {
 
@@ -156,6 +156,11 @@ namespace FastConHost
             }
         }
 
+        public IEnumerable<string> LookUp(string query)
+        {
+            return FileDirQueryTree.LookUp(query, true);
+        }
+
         private FileDirectoryQueryTree FileDirQueryTree = new FileDirectoryQueryTree();
         public IEnumerable<String> BuildIndex(string szDriveLetter, HashSet<string> excludeDirectories = null)
         {
@@ -164,7 +169,6 @@ namespace FastConHost
 
         public IEnumerable<String> BuildIndex(BackgroundWorker bw, string szDriveLetter, HashSet<string> excludeDirectories = null)
         {
-            var dicFRNLookup = new Dictionary<long, FSNode>();
             var ci = CultureInfo.CurrentCulture;
             try
             {
@@ -231,7 +235,7 @@ namespace FastConHost
                             FSNode temp = fs;
                             String partPath = null;
 
-                            while (dicFRNLookup.TryGetValue(temp.ParentFRN, out temp))
+                            while (FileDirQueryTree.FRNLookup.TryGetValue(temp.ParentFRN, out temp))
                             {
                                 pa = temp;
                                 partPath = string.Concat(temp.FileName, @"\", partPath);
@@ -270,7 +274,7 @@ namespace FastConHost
                                 continue;
 
                             fs.FullDirectory = fullDirectory;
-                            dicFRNLookup.Add(refnum, fs);
+                            FileDirQueryTree.FRNLookup.Add(refnum, fs);
 
                             var sFullPath = string.Concat(fs.FullDirectory, fs.FileName);
                             if (fs.IsFile)
@@ -279,7 +283,7 @@ namespace FastConHost
                                 {
                                     continue;
                                 }
-                                FileDirQueryTree.Add(new FileNodeInfo(refnum, usnRecord.ParentFileReferenceNumber, sFullPath));
+                                FileDirQueryTree.Add(refnum, fs.FileName);
                             }
                             else
                             {
@@ -287,7 +291,7 @@ namespace FastConHost
                                 {
                                     continue;
                                 }
-                                FileDirQueryTree.Add(new DirectoryNodeInfo(refnum, usnRecord.ParentFileReferenceNumber, sFullPath));
+                                FileDirQueryTree.Add(refnum, fs.FileName);
                             }
 
                             yield return sFullPath;

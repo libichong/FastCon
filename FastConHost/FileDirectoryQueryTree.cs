@@ -12,45 +12,74 @@ namespace FastConHost
         private Dictionary<long, FileNodeInfo> fileTree;
         private Dictionary<long, DirectoryNodeInfo> dirTree;
         private WordBreaker wordBreaker;
+        public Dictionary<long, FSNode> FRNLookup;
 
         public FileDirectoryQueryTree()
         {
             fileTree = new Dictionary<long, FileNodeInfo>();
             dirTree = new Dictionary<long, DirectoryNodeInfo>();
+            FRNLookup = new Dictionary<long, FSNode>();
             wordBreaker = new WordBreaker(@"C:\FastCon\Library\words.dll");
         }
         public void Dispose()
         {
         }
 
-        public void Add(DirectoryNodeInfo dir)
+        public IEnumerable<string> LookUp(string query, bool isFile)
         {
+            if(this.ContainsKey(query))
+            {
+                foreach(var id in this[query])
+                {
+                    if(isFile && FRNLookup[id].IsFile)
+                    {
+                        String topPar = null;
+                        FSNode pa = FRNLookup[id];
+                        FSNode temp = FRNLookup[id];
+                        String partPath = null;
 
-            //var name = dir.Name.ToLower();
-            //if (!this.ContainsKey(name))
-            //{
-            //    this[name] = new HashSet<long>();
-            //}
-            var subWords = wordBreaker.BreakWorkds(dir.DirectoryName);
+                        while (FRNLookup.TryGetValue(temp.ParentFRN, out temp))
+                        {
+                            pa = temp;
+                            partPath = string.Concat(temp.FileName, @"\", partPath);
+                        }
+
+                        if (!pa.IsFile)
+                        {
+                            if (string.IsNullOrEmpty(partPath))
+                            {
+                                partPath = pa.FileName;
+                                topPar = pa.FileName;
+                            }
+                            else
+                            {
+                                topPar = pa.FileName;
+                            }
+                        }
+
+                        string fullDirectory = string.Concat(@"D:\\", partPath);
+                        yield return fullDirectory;
+                    }                    
+                }
+            }
+        }
+
+        public void Add(long id, string name)
+        {
+            var subWords = wordBreaker.BreakWorkds(name);
 
             foreach(var subWord in subWords)
             {
-                if(!this.ContainsKey(subWord))
+                var subWordLower = subWord.ToLower();
+                if(!this.ContainsKey(subWordLower))
                 {
-                    this[subWord] = new HashSet<long>();
+                    this[subWordLower] = new HashSet<long>();
                 }
-                this[subWord].Add(dir.DirectoryNodeId);
+                if (this.Values.Count < 100)
+                {
+                    this[subWordLower].Add(id);
+                }
             }
-
-            //if (!this[name].Contains(dir.FullName))
-            //{
-            //    this[name].AddLast(dir.FullName);
-            //}
-        }
-
-        public void Add(FileNodeInfo fileNode)
-        {
-            fileTree[fileNode.FileNodeId] = fileNode;
         }
 
         public void Serialize(Stream stream)

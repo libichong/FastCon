@@ -39,16 +39,32 @@ namespace FastConHost
             List<string> subWords = new List<string>();
             subWords.Add(word);
             int pos = 0;
-            for(int i = pos + 1;i<word.Length;i++)
+            bool flag = false;
+            for (int i = pos + 1; i < word.Length; i++)
             {
-                if((word[i] >='A' && word[i] <= 'Z') || word[i] == '_' || word[i] ==' ' || word[i] == '-')
+                if ((word[i] >= 'A' && word[i] <= 'Z') || (word[i] == '_' || word[i] == ' ' || word[i] == '-' || word[i] == '.'))
                 {
-                    subWords.Add(word.Substring(pos, i - pos));
+                    if (word[i - 1] >= 'A' && word[i - 1] <= 'Z')
+                    {
+                        flag = true;
+                        continue;
+                    }
+                    if (i - pos > 2)
+                    {
+                        subWords.Add(word.Substring(pos, i - pos));
+                    }
                     pos = i;
+                }
+
+                if(flag && i - pos > 2)
+                {
+                    subWords.Add(word.Substring(pos, i - pos - 1));
+                    pos = i - 1;
+                    flag = false;
                 }
             }
 
-            if(pos <  word.Length)
+            if (pos <  word.Length)
             {
                 subWords.Add(word.Substring(pos, word.Length - pos));
             }
